@@ -45,29 +45,61 @@ public class Client extends Thread
         InetSocketAddress hostAddress = new InetSocketAddress(address, port);
         SocketChannel client;
         
+        String bufferString = "";
+        char bufferChar;
+   
+        DatagramPacket message;
+        byte[] contenuMessage;
+        String texte;
+        ByteArrayInputStream lecteur;
+        
+        
+        
         try
         {
-            Thread.sleep(3000);
+            Thread.sleep(2000);
             
             client = SocketChannel.open(hostAddress);
             System.out.println("Client sending messages to server...");
 
             // Send messages to server
-
-            String [] messages = new String [] {"Time goes fast.", "What now?", "Bye."};
-
-            for (int i = 0; i < messages.length; i++)
+            
+          
+            // Boucle principale du client
+            do
             {
-                byte [] message = new String(messages [i]).getBytes();
-                ByteBuffer buffer = ByteBuffer.wrap(message);
+                // Boucle d'écriture
+                do
+                {
+                    
+                    bufferChar = (char) System.in.read();
+                    bufferString += bufferChar;
+                                  
+                }while(bufferChar!='\n');
+                
+                byte [] sendMessage;
+                sendMessage = bufferString.getBytes();
+                bufferString = "";
+                ByteBuffer buffer = ByteBuffer.wrap(sendMessage);
                 client.write(buffer);
-
-                System.out.println(messages [i]);
-                buffer.clear();
-                Thread.sleep(3000);
-            }
-
-            //client.close();      
+     
+                // Lecture d'un message                
+                contenuMessage = new byte[1024];
+                message = new DatagramPacket(contenuMessage, contenuMessage.length);
+                try 
+                {
+                    socketReception.receive(message);
+                    texte = (new DataInputStream(new ByteArrayInputStream(contenuMessage))).readUTF();
+                    System.out.println(texte);
+                }
+                catch(Exception exc)
+                {
+                      System.out.println(exc);
+                }
+                              
+            }while(bufferString!="exit\n");
+            
+            client.close();      
         
         } 
         
@@ -80,27 +112,7 @@ public class Client extends Thread
         {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        /* DatagramPacket message;
-        byte[] contenuMessage;
-        String texte;
-        ByteArrayInputStream lecteur;
-    
-        while(true) 
-        {
-            contenuMessage = new byte[1024];
-            message = new DatagramPacket(contenuMessage, contenuMessage.length);
-            try 
-            {
-                socketReception.receive(message);
-                texte = (new DataInputStream(new ByteArrayInputStream(contenuMessage))).readUTF();
-                System.out.println(texte);
-            }
-            catch(Exception exc)
-            {
-                  System.out.println(exc);
-            }
-        }*/
+               
     }
             
 }

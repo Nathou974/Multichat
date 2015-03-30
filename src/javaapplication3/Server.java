@@ -103,10 +103,13 @@ public class Server extends Thread implements MultichatServer
                     System.out.println("Message read from client: " + cbuf);
                     buffer.compact();
                     
-                    /* Multicast
-                     *
-                     * 
-                    
+                    if (cbuf.toString().equals("exit\n"))
+                    {
+                        client.close();
+	                System.out.println("Client messages are complete; close.");
+	            }
+	 
+                 
                     byte[] contenuMessage;
                     DatagramPacket message;
 	
@@ -116,16 +119,6 @@ public class Server extends Thread implements MultichatServer
                     contenuMessage = sortie.toByteArray();
 		    message = new DatagramPacket(contenuMessage, contenuMessage.length, group, 9998);
                     s.send(message);
-                    
-                    */
-                    
-   
-                    /*if (cbuf.toString().equals("Bye."))
-                    {
-                        client.close();
-	                System.out.println("Client messages are complete; close.");
-	            }*/
-	 
 
                 } else if (key.isWritable()) {
                     // a channel is ready for writing
