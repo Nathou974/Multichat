@@ -8,7 +8,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,17 +26,14 @@ import java.util.logging.Logger;
  */
 public class Client extends Thread
 {
-    private final InetAddress address,group;
+    private final InetAddress address;
     private final int port;
-    private MulticastSocket socketReception;
-    
+ 
     public Client(InetAddress address, int port) throws IOException 
     {
         this.address = address;
         this.port = port;
-        group = InetAddress.getByName("224.0.1.0");
-        socketReception = new MulticastSocket(9998);
-        socketReception.joinGroup(group);
+      
     }
     
     @Override
@@ -47,13 +46,6 @@ public class Client extends Thread
         
         String bufferString = "";
         char bufferChar;
-   
-        DatagramPacket message;
-        byte[] contenuMessage;
-        String texte;
-        ByteArrayInputStream lecteur;
-        
-        
         
         try
         {
@@ -62,13 +54,12 @@ public class Client extends Thread
             client = SocketChannel.open(hostAddress);
             System.out.println("Client sending messages to server...");
 
-            // Send messages to server
-            
-          
             // Boucle principale du client
             do
             {
-                // Boucle d'écriture
+                // Boucle d'écriture                 
+                bufferString = "";
+                
                 do
                 {
                     
@@ -77,25 +68,21 @@ public class Client extends Thread
                                   
                 }while(bufferChar!='\n');
                 
+                // Lecture
+                
                 byte [] sendMessage;
                 sendMessage = bufferString.getBytes();
-                bufferString = "";
+              
                 ByteBuffer buffer = ByteBuffer.wrap(sendMessage);
                 client.write(buffer);
      
-                // Lecture d'un message                
-                contenuMessage = new byte[1024];
-                message = new DatagramPacket(contenuMessage, contenuMessage.length);
-                try 
-                {
-                    socketReception.receive(message);
-                    texte = (new DataInputStream(new ByteArrayInputStream(contenuMessage))).readUTF();
-                    System.out.println(texte);
-                }
-                catch(Exception exc)
-                {
-                      System.out.println(exc);
-                }
+                ByteBuffer bufferReceive = ByteBuffer.allocate(8192);
+                client.read(bufferReceive);
+                Charset charset = Charset.defaultCharset();
+                bufferReceive.flip();
+                CharBuffer cbuf = charset.decode(bufferReceive);
+                System.out.println("Message read from server: " + cbuf);
+                bufferReceive.compact();
                               
             }while(bufferString!="exit\n");
             

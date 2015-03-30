@@ -5,140 +5,163 @@
  */
 package javaapplication3;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.DatagramPacket;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.MulticastSocket;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.nio.charset.Charset;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
 
-/**
- *
- * @author nathanael
- */
-public class Server extends Thread implements MultichatServer
+
+public class Server
 {
+    InetAddress address;
+    int port;
+
+    ServerSocket server;
+    Socket client;
     
-    private InetAddress address;
-    private int port;
-    
+    private ArrayList<OutputStream> OutputStreamArray = new ArrayList<OutputStream>();
+
     public Server(InetAddress address, int port)
     {
-        this.address = address;
-        this.port = port;
+            this.address = address;
+            this.port = port;
     }
-
-    @Override
-    public void run() 
+	
+    public void start() throws IOException
     {
-      
-    ServerSocketChannel serverSocketChannel;
+        server = new ServerSocket();
+        server.bind(server.getLocalSocketAddress(), port);
 
-    
-    try 
-    {
-        InetAddress group = InetAddress.getByName("224.0.1.0");
-        MulticastSocket s = new MulticastSocket(9998);
-        s.joinGroup(group);
-           
-        System.out.println(InetAddress.getLocalHost());
-        Selector selector = Selector.open();
-        System.out.println("Selector open: " + selector.isOpen());
-        serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.socket().bind(new InetSocketAddress(address, port));
-        System.out.println(serverSocketChannel.getLocalAddress());
-        serverSocketChannel.configureBlocking(false);
-        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-        
-        
-        
+        System.out.println("inet address: " + address);
+        //System.out.println("port: " + port);
+        System.out.println("server address: " + server.getLocalSocketAddress());
+
         while(true)
         {
-            
-            System.out.println("Waiting for select...");
-            int noOfKeys = selector.select();	 
+            System.out.println("attente de client");
+            client = server.accept();
+            System.out.println("client accepté");
            
-            System.out.println("Number of selected keys: " + noOfKeys);	 
-           
-            Set<SelectionKey> selectedKeys = selector.selectedKeys();
-
-            Iterator<SelectionKey> keyIterator = selectedKeys.iterator();
-
-            while(keyIterator.hasNext())
+            new Thread(new ClientServer(client)).start();
+        }
+    }
+    
+    public synchronized void removeClient (OutputStream streamOut)
+    {
+        for(OutputStream stream : OutputStreamArray)
+        {
+            if(stream == streamOut)
             {
-                
-                SelectionKey key = keyIterator.next();
-
-                if(key.isAcceptable()) {
-                    // a connection was accepted by a ServerSocketChannel.
-                    SocketChannel socketChannel = serverSocketChannel.accept();
-                    socketChannel.configureBlocking(false);
-                    socketChannel.register(selector, SelectionKey.OP_READ);
-                   
-                } else if (key.isConnectable()) {
-                    // a connection was established with a remote server.
-                    System.out.println("isConnectable");
-
-                } else if (key.isReadable()) {
-                    // a channel is ready for reading
-                    SocketChannel client = (SocketChannel) key.channel();
-                    ByteBuffer buffer = ByteBuffer.allocate(8192);
-                    client.read(buffer);
-                    Charset charset = Charset.defaultCharset();
-                    buffer.flip();
-                    CharBuffer cbuf = charset.decode(buffer);
-                    System.out.println("Message read from client: " + cbuf);
-                    buffer.compact();
-                    
-                    if (cbuf.toString().equals("exit\n"))
-                    {
-                        client.close();
-	                System.out.println("Client messages are complete; close.");
-	            }
-	 
-                 
-                    byte[] contenuMessage;
-                    DatagramPacket message;
-	
-                    ByteArrayOutputStream sortie = new ByteArrayOutputStream(); 
-                    
-                    (new DataOutputStream(sortie)).writeUTF(cbuf.toString()); 
-                    contenuMessage = sortie.toByteArray();
-		    message = new DatagramPacket(contenuMessage, contenuMessage.length, group, 9998);
-                    s.send(message);
-
-                } else if (key.isWritable()) {
-                    // a channel is ready for writing
-                    System.out.println("isWritable");
-                }
-
-                keyIterator.remove();
-
+               OutputStreamArray.remove(stream);
             }
-   
+        }
+    }
+    
+    public void sendToAll(String message, OutputStream streamOut) throws IOException
+    {
+        for(OutputStream stream : OutputStreamArray)
+        {
+            if(stream != streamOut)
+            {
+                for(int i=0; i<message.length(); i++)
+                {
+                    stream.write(message.charAt(i));    
+                }
+            }
+        }
+    }
+
+    public class ClientServer implements Runnable
+    {
+        Socket client;
+
+        InputStream streamIn;
+        OutputStream streamOut;
+
+        String bufferString, bufferStringConnexion, nickname;
+        char bufferChar;
+
+        public ClientServer(Socket client)
+        {
+                this.client = client;
         }
 
-    } 
-    
-    catch (IOException ex) 
-    {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-    }
+        public void run()
+        {
+            int i;
+            try
+            {
+                nickname = "";
+                streamIn = client.getInputStream();
+                streamOut = client.getOutputStream();
 
-    }
+                OutputStreamArray.add(streamOut);
 
-  
+                bufferString = "bienvenue\n";
+                bufferStringConnexion = "Un client s'est connecte !\n";
+
+                sendToAll(bufferStringConnexion,streamOut);
+
+                for(i=0; i<bufferString.length(); i++)
+                {
+                    streamOut.write(bufferString.charAt(i));
+                }
+                
+                while(!bufferString.equals(nickname +": exit\n"))
+                {
+                    if (nickname != "")
+                    {
+                         bufferString = nickname + ": ";
+                    }
+
+                    else
+                    {
+                        bufferString = "";
+                    }
+
+                    bufferChar = 'a';
+
+                    while(bufferChar != '\n')
+                    {                              
+                        bufferChar = (char) streamIn.read();
+                        bufferString += bufferChar;
+                    }
+
+                    if (bufferString.startsWith("/nick"))
+                    {
+                        nickname = bufferString.substring(6, bufferString.length()-1);
+                    }
+
+                    else
+                    {
+
+                    System.out.print(bufferString);
+                    sendToAll(bufferString,streamOut);
+                    
+                    }
+                }
+                
+                if (nickname != "")
+                {
+                    sendToAll(nickname+" s'est deconnecte du chat !\n",streamOut);
+                }
+                
+                else
+                {
+                    sendToAll("Une personne anonyme s'est deconnectee du chat !\n",streamOut);
+                }
+                
+                removeClient(streamOut);   
+                client.close();            
+            }
+            
+            catch(IOException e)
+            {
+                    e.printStackTrace();
+            }
+        }
+    }
 }
