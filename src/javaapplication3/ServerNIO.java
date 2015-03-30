@@ -50,10 +50,7 @@ public class ServerNIO extends Thread implements MultichatServer
     
     try 
     {
-        InetAddress group = InetAddress.getByName("224.0.1.0");
-        MulticastSocket s = new MulticastSocket(9998);
-        s.joinGroup(group);
-           
+        
         System.out.println(InetAddress.getLocalHost());
         Selector selector = Selector.open();
         System.out.println("Selector open: " + selector.isOpen());

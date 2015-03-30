@@ -91,9 +91,9 @@ public class JavaApplication3 {
                 
                 case 'c' :
                     clientbool = true;
-                    System.out.println("On instancie un client pour serveur NIO");
+                    /*System.out.println("On instancie un client pour serveur NIO");
                     Client client =  new Client(InetAddress.getLocalHost(), 9999);
-                    client.start();
+                    client.start();*/
                 break;   
                     
                 case 'm' :
@@ -108,45 +108,56 @@ public class JavaApplication3 {
             }
             
         }   
-            if(server && !nio)
+            if(server && !nio && !clientbool)
             {
                 System.out.println("On instancie un serveur");
+                
                 if (!"".equals(address) && port !=0)
                 {
                     Server serveur =  new Server(InetAddress.getByName(address), port);
-                    serveur.start();
+                    serveur.start();     
                 }
                 else
                 {
                     Server serveur =  new Server(InetAddress.getLocalHost(), 9999);
                     serveur.start();
                 }   
+           
             }
             
             else if(nio && !server)
             {
                 System.out.println("On instancie un serveur NIO");
+                
                 if (!"".equals(address) && port !=0)
                 {
                     ServerNIO serveurNio =  new ServerNIO(InetAddress.getByName(address), port);
                     serveurNio.start();
+                    if (clientbool)
+                    {
+                    System.out.println("On instancie un client pour serveur NIO");
+                    Client client =  new Client(InetAddress.getByName(address), port);
+                    client.start();
+                    }
                 }
                 else
                 {
                     ServerNIO serveurNio =  new ServerNIO(InetAddress.getLocalHost(), 9999);
                     serveurNio.start();
+                    if (clientbool)
+                    {
+                    System.out.println("On instancie un client pour serveur NIO");
+                    Client client =  new Client(InetAddress.getLocalHost(), 9999);
+                    client.start();
+                    }
                 }
             }
             
-            else if(nio && server)
+            else if(nio && server && clientbool || server && nio || server && clientbool)
             {
                 System.out.println("Veuillez saisir des arguments corrects");
             }
-            
-            else if(server && clientbool)
-            {
-                System.out.println("Veuillez saisir des arguments corrects");
-            }
+         
 
     }
     
